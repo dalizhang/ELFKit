@@ -19,12 +19,12 @@ namespace elfkit {
         inline const int get_fd(){return m_fd;}
         inline const char * get_realpath() {return m_realpath.c_str();}
 
-        ElfW(Sym) find_symbol(const char * name, int type = -1);
-        ElfW(Sym) find_dynamic_symbol(const char * name, int type = -1);
+        ElfW(Sym) * find_symbol(const char * name, int type = -1);
+        ElfW(Sym) * find_dynamic_symbol(const char * name, int type = -1);
 
-        void * find_function(const char * name);
-        void * find_variable(const char * name);
-        
+        bool find_function(const char * name, uintptr_t & offset);
+        bool find_variable(const char * name, uintptr_t & offset, size_t & size);
+
         void dump_elf_header(void);
         void dump_section_headers(void);
         void dump_program_headers(void);

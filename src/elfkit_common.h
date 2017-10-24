@@ -30,6 +30,13 @@ namespace elfkit {
 
     #endif
 
+    #define ELF_ST_BIND(x) ((x) >> 4)
+    #define ELF_ST_TYPE(x) (((unsigned int) x) & 0xf)
+    #define ELF32_ST_BIND(x) ELF_ST_BIND(x)
+    #define ELF32_ST_TYPE(x) ELF_ST_TYPE(x)
+    #define ELF64_ST_BIND(x) ELF_ST_BIND(x)
+    #define ELF64_ST_TYPE(x) ELF_ST_TYPE(x)
+        
     #if defined(__LP64__)
         #define ElfW(type) Elf64_ ## type
         static inline ElfW(Word) elf_r_sym(ElfW(Xword) info) { return ELF64_R_SYM(info);  }

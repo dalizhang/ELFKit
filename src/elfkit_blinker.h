@@ -6,10 +6,13 @@
 
 #include <string>
 #include <map>
+#include <unordered_map>
 
 namespace elfkit {
 
-    typedef void * (*fn_dlopen)(const char * name, int mode);
+    typedef void * (*fn_soinfo_map_find)(void * map, uintptr_t * handle);
+    typedef void * (*fn_dlopen)(const char * name, int flags);
+    typedef void * (*fn_dlopen_ext)(const char * soname, int flags, void * extinfo, void * caller_addr);
 
     class blinker {
         public:
@@ -18,10 +21,12 @@ namespace elfkit {
             
         public:
             static uint32_t get_sdk_version();
+            void load();
 
             void * find_library_by_name(const char * soname);
             soimage * new_soimage(const char * soname);
-            int phrase_proc_maps();
+            int phrase_proc_maps(std::map<std::string, soimage> & soimages);
+
         protected:
 
             bool phrase_proc_base_addr(char* addr, void** pbase_addr, void** pend_addr);
@@ -29,12 +34,17 @@ namespace elfkit {
             bool phrase_proc_maps_line(char* line, char** paddr, char** pflags, char** pdev, char** pfilename);
             bool check_flags_and_devno(char* flags, char* dev);
 
+            bool load_soinfo_list();
+
         protected:
         
-            static fn_dlopen s_origin_dlopen;        
-        
-            void * m_soinfo_list;
-            std::map<std::string, soimage> m_soimages;
+            fn_dlopen               m_origin_dlopen;        
+            fn_dlopen_ext           m_origin_dlopen_ext;
+            fn_soinfo_map_find      m_origin_soinfo_map_find;
+
+            void            *m_soinfo_list;
+            soimage         *m_linker_image;
+            void            *m_soinfo_handles_map;     
     };
 
 };

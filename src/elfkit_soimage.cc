@@ -65,7 +65,7 @@ namespace elfkit {
             if (phdr->p_type != PT_LOAD) {
               continue;
             }
-            fprintf(stderr, "PT_LOAD, 0x%08X, 0x%08X\n", phdr->p_vaddr, phdr->p_memsz);
+            fprintf(stderr, "PT_LOAD, filesz(%p) vaddr(%p), memsz(%08x)\n", (void*)phdr->p_filesz, (void*)phdr->p_vaddr, phdr->p_memsz);
             found_pt_load = true;
 
             if (phdr->p_vaddr < min_vaddr) {
@@ -122,7 +122,7 @@ namespace elfkit {
             this->m_bias_addr = this->get_exec_load_bias_addr(this->m_ehdr);
         }
         
-        fprintf(stderr, "%p,%p,%p,%p\n", 
+        fprintf(stderr, "base_addr(%p), bias_addr(%p), phoff(%p), shoff(%p)\n", 
                         (void*)this->get_base_addr(), 
                         (void*)this->get_bias_addr(),
                         (void*)this->m_ehdr->e_phoff,
@@ -150,8 +150,6 @@ namespace elfkit {
         this->m_dyn_size = size / sizeof(Elf32_Dyn);
         for(int i = 0; i < (int)this->m_dyn_size; i += 1, dyn += 1) {
             switch(dyn->d_tag) {
-        //    case SHT_DYNSYM:
-
             case DT_SYMTAB:
                 this->m_sym_ptr = reinterpret_cast<ElfW(Sym) *>(this->get_bias_addr() + dyn->d_un.d_ptr);
                 break;

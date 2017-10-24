@@ -226,7 +226,7 @@ namespace elfkit {
         }
         if (strtab_shdr && 
             check_file_range(strtab_shdr->sh_offset, strtab_shdr->sh_size, 1)) {
-            if (this->m_strtab_fragment.map(this->m_fd, 0, strtab_shdr->sh_offset, strtab_shdr->sh_size)) {
+            if (!this->m_strtab_fragment.map(this->m_fd, 0, strtab_shdr->sh_offset, strtab_shdr->sh_size)) {
                 log_warn("strtab map fail, %s\n", strerror(errno));
             }
             this->m_strtab = static_cast<const char *>(this->m_strtab_fragment.data());
@@ -235,32 +235,59 @@ namespace elfkit {
         return true;
     }
 
-    ElfW(Sym) * find_symbol(const char * name, int type) {
+    ElfW(Sym) * sofile::find_symbol(const char * name, int type) {
         ElfW(Sym) * sym = this->m_symtab;
         const char * strtab = this->m_strtab;
         for (int i = 0; i < this->m_symtab_size/sizeof(ElfW(Sym)); i++) {
             const char * sym_name = sym[i].st_name + strtab;
-            if (type == -1 || type == elf_r_type(sym[i].st_info)) {
+            if (type == -1 || type == ELF_ST_TYPE(sym[i].st_info)) {
                 if (strcmp(name, sym_name) == 0) {
-                    return sym;
+                    return &sym[i];
                 }
             }
         }
         return nullptr;
     }
 
-    ElfW(Sym) * find_dynamic_symbol(const char * name, int type) {
+    ElfW(Sym) * sofile::find_dynamic_symbol(const char * name, int type) {
         ElfW(Sym) * sym = this->m_dynsym;
         const char * strtab = this->m_dynstr;
         for (int i = 0; i < this->m_dynsym_size/sizeof(ElfW(Sym)); i++) {
             const char * sym_name = sym[i].st_name + strtab;
-            if (type == -1 || type == elf_r_type(sym[i].st_info)) {
+            if (type == -1 || type == ELF_ST_TYPE(sym[i].st_info)) {
                 if (strcmp(name, sym_name) == 0) {
-                    return sym;
+                    return &sym[i];
                 }
             }
         }
         return nullptr;
+    }
+
+    bool sofile::find_function(const char * name, uintptr_t & offset) {
+        bool retval = false;
+        ElfW(Sym) * sym = this->find_dynamic_symbol(name, STT_FUNC);
+        if (!sym) {
+            sym = this->find_symbol(name, STT_FUNC);
+        }
+        if (sym) {
+            offset = static_cast<uintptr_t>(sym->st_value);
+            retval = true;
+        }
+        return retval;
+    }
+
+    bool sofile::find_variable(const char * name, uintptr_t & offset, size_t & size) {
+        bool retval = false;
+        ElfW(Sym) * sym = this->find_dynamic_symbol(name, STT_OBJECT);
+        if (!sym) {
+            sym = this->find_symbol(name, STT_OBJECT);
+        }
+        if (sym) {
+            offset = static_cast<uintptr_t>(sym->st_value);
+            size = static_cast<size_t>(sym->st_size);
+            retval = true;
+        }
+        return retval;
     }
 
     void sofile::dump_elf_header(void) {
@@ -350,11 +377,11 @@ namespace elfkit {
         const char * strtab = this->m_strtab;
         for (int i = 0; i < this->m_symtab_size/sizeof(ElfW(Sym)); i++) {
             const char * sym_name = sym[i].st_name + strtab;
-            log_info("[%2d] %-20s st_value(%p), st_size(%d), info(%d), type(%d)\n", i, sym_name,
+            log_info("[%2d] %-20s st_value(%p), st_size(%d), bind(%d), type(%d)\n", i, sym_name,
                     (void*)sym[i].st_value,
                     sym[i].st_size,
-                    elf_r_sym(sym[i].st_info),
-                    elf_r_type(sym[i].st_info));
+                    ELF_ST_BIND(sym[i].st_info),
+                    ELF_ST_TYPE(sym[i].st_info));
         }
     }
 
@@ -364,11 +391,11 @@ namespace elfkit {
         const char * strtab = this->m_dynstr;
         for (int i = 0; i < this->m_dynsym_size/sizeof(ElfW(Sym)); i++) {
             const char * sym_name = sym[i].st_name + strtab;
-            log_info("[%2d] %-40s st_value(%p), st_size(%d), info(%d), type(%d)\n", i, sym_name,
+            log_info("[%2d] %-40s st_value(%p), st_size(%d), bind(%d), type(%d)\n", i, sym_name,
                     (void*)sym[i].st_value,
                     sym[i].st_size,
-                    elf_r_sym(sym[i].st_info),
-                    elf_r_type(sym[i].st_info));
+                    ELF_ST_BIND(sym[i].st_info),
+                    ELF_ST_TYPE(sym[i].st_info));
         }
     }  
 };
